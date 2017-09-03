@@ -1,0 +1,75 @@
+{
+  "intents": [
+    {
+      "intent": "PCSessionStart",
+      "slots": [
+        {
+          "name": "m",
+          "type": "AMAZON.NUMBER"
+        },
+        {
+          "name": "l",
+          "type": "PS_LEVEL"
+        },
+        {
+          "name": "t",
+          "type": "AMAZON.NUMBER"
+        }
+      ]
+    },
+    {
+      "intent": "PCSessionLevelChange",
+      "slots": [
+        {
+          "name": "l",
+          "type": "PS_LEVEL"
+        }
+      ]
+    },
+    {
+      "intent": "PCSessionTimeChange",
+      "slots": [
+        {
+          "name": "t",
+          "type": "AMAZON.NUMBER"
+        }
+      ]
+    },
+    {
+      "intent": "PCSessionModeChange",
+      "slots": [
+        {
+          "name": "endless",
+          "type": "PS_ENDLESS"
+        }
+      ]
+    },
+    {
+      "intent": "PCSessionNoOfQuestionChange",
+      "slots": [
+        {
+          "name": "q",
+          "type": "AMAZON.NUMBER"
+        }
+      ]
+    },
+    {
+      "intent": "PCAnswer",
+      "slots": [
+        {
+          "name": "ans",
+          "type": "AMAZON.NUMBER"
+        }
+      ]
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    }
+  ]
+}
