@@ -15,6 +15,7 @@ Level hard : the possible operands are 0 - 999
 This skill presents how to handle same data type (Slot) in different question.
 For example, Please consider these 2 question, we expect users to response with number
 > Q1 : How many a number of questions would you like ?
+
 > Q2 : What is 10+5 ?
 
 How does our skill process answer with correct question ? Yes, we have 2 approach
@@ -22,6 +23,7 @@ How does our skill process answer with correct question ? Yes, we have 2 approac
 ## Separate Intents with key word
 For example,
 >NoofQuestionResIntent {numofqn} questions
+
 >SumAnswerIntent the answer is {ans}
 
 This approch will unnaturally ask user to provide key word or Users need to answer with the pattern we need. Surely we need to guide the pattern in our question's speech.
@@ -34,4 +36,5 @@ In our skill, we control our workflow. For this case, user need to specify a num
 
 # Custom Slot
 PS_LEVEL	easy | medium | hard
+
 PS_ENDLESS	yes | no | of course | exactly | nope
