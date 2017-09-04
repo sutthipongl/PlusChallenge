@@ -490,7 +490,10 @@ public class App implements Speechlet
 	        else
 	        	content += "\n";
 	        
-	        cardQuestionAnswer.setContent(content + "Your score is " + getAttr(SCORE,s) + " from " + getAttr(NoOfQns,s) + " questions, thanks for playing");	
+	        if (getBoolAttr(ENDLESS, s))
+	        	cardQuestionAnswer.setContent(content + "Your score is " + getAttr(SCORE,s) + ", thanks for playing");
+	        else
+	        	cardQuestionAnswer.setContent(content + "Your score is " + getAttr(SCORE,s) + " from " + getAttr(NoOfQns,s) + " questions, thanks for playing");	
 	        	
 	        resetAttr(s);
 			return SpeechletResponse.newTellResponse(speech, cardQuestionAnswer);
