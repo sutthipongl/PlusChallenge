@@ -1,12 +1,8 @@
 PCSessionStart start plus challenge
-PCSessionLevelChange easy {l}
-PCSessionLevelChange medium {l}
-PCSessionLevelChange hard {l}
+PCSessionLevelChange {l}
 PCSessionModeChange {endless}
-PCSessionNoOfQuestionChange {q} challenge
-PCSessionNoOfQuestionChange challenge {q}
-PCAnswer answer is {ans}
-PCAnswer {ans}
-AMAZON.StopIntent stop
+PCNumberAnswer answer is {ans}
+PCNumberAnswer {ans}
 AMAZON.CancelIntent cancel
 AMAZON.HelpIntent help
+AMAZON.StopIntent stop
