@@ -34,6 +34,7 @@ public class App implements Speechlet
 	// private static final String INTENT_LIMITCHANGE = "PCSessionTimeChange";
 	 private static final String INTENT_MODECHANGE = "PCSessionModeChange";
 	 private static final String INTENT_ANSWER = "PCNumberAnswer";
+	 private static final String INTENT_UNCLEAR = "PCUnclear";
 	 private static final String ENDLESS = "endless";
 	// private static final String LIMIT = "limit";
 	 private static final String LEVEL = "level";
@@ -43,6 +44,8 @@ public class App implements Speechlet
 	 private static final String SCORE = "score";
 	 private static final String QUESTION = "question";
 	 private static final String STOPFLAG = "stop";
+	 
+	 private static final Integer QN_NO_DEFAULT = 5;
 	
 	 SimpleCard cardQuestionAnswer = null;
 	 public void onSessionStarted(SessionStartedRequest request, Session session) throws SpeechletException {
@@ -58,7 +61,7 @@ public class App implements Speechlet
 			// TODO Auto-generated method stub
 			  log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(),
 		                session.getSessionId());
-		        return getNextQuestion(session);
+		        return getNextQuestion("",session);
 		}
 
 		public SpeechletResponse onIntent(IntentRequest request, Session session) throws SpeechletException {
@@ -68,7 +71,7 @@ public class App implements Speechlet
 
 	        Intent intent = request.getIntent();
 	        String intentName = (intent != null) ? intent.getName() : null;
-
+	        log.info("Intent name :"+intentName);
 	        // Session start
 	        if (intentName.equals(INTENT_START)) 
 	        {
@@ -86,7 +89,11 @@ public class App implements Speechlet
 	        { // process both a no of question users want and answer for each challenge
 	        	return processAnswer(request,session);
 	        	
-	        }else if (intentName.equals("AMAZON.HelpIntent"))
+	        } else if (intentName.equals(INTENT_UNCLEAR))
+	        {
+	        	return processUnclearResponse(request,session);
+	        }
+	        else if (intentName.equals("AMAZON.HelpIntent"))
 	        {
 	        	return getHelpResponse(session);
 	        	
@@ -110,7 +117,8 @@ public class App implements Speechlet
 		private SpeechletResponse processSessionStart(IntentRequest r, Session s)
 		{
 			log.info("processSessionStart called : Current state is "+ getCurrentState(s) );
-			return getNextQuestion(s);
+			
+			return getNextQuestion("",s);
 			
 		}
 		
@@ -123,26 +131,41 @@ public class App implements Speechlet
 				try{
 					// Get and set data from Intent if have		
 					String level = String.valueOf(r.getIntent().getSlots().get("l").getValue());
-					if (level.equals("easy") | level.equals("medium") | level.equals("hard")) 
-						setAttr(LEVEL,level,s);
+					log.info("processLevelChange called : user said = "+level);
+					
+					if (level.indexOf("easy") != -1) 
+						setAttr(LEVEL,"easy",s);
+					else if (level.indexOf("medium") != -1) 
+						setAttr(LEVEL,"medium",s);
+					else if (level.indexOf("hard") != -1) 
+						setAttr(LEVEL,"hard",s);
 					else
-						return askAgain();
-					
-					log.info("processLevelChange called : level="+level);
-					
+						setAttr(LEVEL,"easy",s);
+						
 					setAttr(SESSSTATE,PSstate.START,s);
+					log.info("processLevelChange called : set state to START");
 					
-					return getNextQuestion(s);
+					return getNextQuestion("",s);
 					
-				}catch (NumberFormatException e)
+				}catch (Exception e)
 				{
 					// Not sure what user said, ask for answer again
-					return askAgain();
+					log.error("processLevelChange Exception : " + e.getMessage());
+					return askAgain(getStrAttr(QUESTION, s));
 				}
 				
 				
 			}else
-				return askAgain();
+			{
+				log.error("processLevelChange : NOT LEVEL state");
+				
+				if(getCurrentState(s) == PSstate.START)
+					return askAgain("Question number "+getAttr(QN_NO,s) + ", " +getStrAttr(QUESTION, s));
+				else
+					return askAgain(getStrAttr(QUESTION, s));
+				
+			}
+				
 			
 			
 			
@@ -180,7 +203,6 @@ public class App implements Speechlet
 			{
 				try
 				{
-					
 					// Get and set data from Intent if have		
 					Boolean endless;
 					String response = String.valueOf(r.getIntent().getSlots().get("endless").getValue());
@@ -199,17 +221,26 @@ public class App implements Speechlet
 					setAttr(ENDLESS,endless,s);
 					log.info("processModeChange called : endless="+endless);	
 					
-					return getNextQuestion(s);
+					return getNextQuestion("",s);
 					
 				}catch (Exception e)
 				{
 					// Not sure what user said, ask for answer again
-					log.error(e.getMessage());
-					return askAgain();
+					log.error("processModeChange exception : " +e.getMessage());
+					return askAgain(getStrAttr(QUESTION, s));
 				}
 			
 			}else // sometime , users say nine but Alex hears No and route to this intent
-				return askAgain();
+			{
+				log.error("processModeChange : not MODE state");
+				
+				if(getCurrentState(s) == PSstate.START)
+					return askAgain("Question number "+getAttr(QN_NO,s) + ", " +getStrAttr(QUESTION, s));
+				else
+					return askAgain(getStrAttr(QUESTION, s));
+				
+			}
+			
 			
 		}
 		
@@ -226,24 +257,24 @@ public class App implements Speechlet
 					
 					log.info("processAnswer called : No of Questions="+qn);
 					setAttr(SESSSTATE, PSstate.LEVEL, s);
-					return getNextQuestion(s);
+					return getNextQuestion("",s);
 					
-				}catch (NumberFormatException e)
+				}catch (Exception e)
 				{
 					// Not sure what user said, ask for answer again
-					return askAgain();
+					log.error("processAnswer exception :" + e.getMessage());
+					return askAgain("Sorry, " +getStrAttr(QUESTION, s));
 				}
 				
 			}else if (getCurrentState(s)  == PSstate.START)
 			{
 				// Get and set data from Intent if have		
+				String result = "";
+				Integer curQnNo = getAttr(QN_NO,s);
+				
 				try{
-					String result = "";
 					Integer user_ans = Integer.valueOf(r.getIntent().getSlots().get("ans").getValue());
-					Integer curQnNo = getAttr(QN_NO,s);
-					
 					log.info("processAnswer called : given answer="+user_ans +" for question "+ curQnNo);
-					
 					
 					if(user_ans.equals(getAttr(QN_ANS,s)))
 					{
@@ -275,26 +306,93 @@ public class App implements Speechlet
 					//	setAttr(NoOfQns, ++curQnNo, s);
 					
 					// Go to next answer
-					return getNextQuestion(s);
+					return getNextQuestion("",s);
 					
-				}catch (NumberFormatException e)
+				}catch (Exception e)
 				{
-					// Not sure what user said, ask for answer again
-					return askAgain();
+					// if player can't see number correctly, imply wrong answer
+					log.info("processAnswer Exception : wrong answer and get next question");
+					
+					result="wrong";
+					if (getBoolAttr(ENDLESS,s))
+					{
+						log.info("set STOPFLAG to true");
+						setAttr(STOPFLAG,true,s);
+					}
+					
+					// Update Card
+					cardQuestionAnswer = new SimpleCard();
+					cardQuestionAnswer.setTitle("Question number "+ curQnNo);
+					cardQuestionAnswer.setContent(getStrAttr(QUESTION,s) + " = 0 ("+ result +")\nScore : " +getAttr(SCORE,s));	
+					
+					setAttr(QN_NO, ++curQnNo, s);
+					log.info("processAnswer called : Update QN_NO to "+getAttr(QN_NO,s));
+					
+					return getNextQuestion("",s);
 				}
 				
 			}else 
-				return askAgain();
+			{
+				log.error("processAnswer : wrong state");
+				return askAgain(getStrAttr(QUESTION, s));
+			}
+				
 			
 		}
 		
+		private SpeechletResponse processUnclearResponse(IntentRequest r, Session s)
+		{	
+			log.info("processAnswer called : Current state is "+ getCurrentState(s) );
+			
+			if (getCurrentState(s)  == PSstate.MODE)
+			{
+				log.info("processUnclearResponse : MODE");
+				//skip asking a no of question, use default
+				setAttr(SESSSTATE,PSstate.LEVEL,s);
+				setAttr(ENDLESS,true,s);
+			
+				return getNextQuestion("No worry , let I question you until you fail," ,s);
+				
+			}else if (getCurrentState(s) == PSstate.NOOFQN)
+			{
+				log.info("processUnclearResponse : NOOFQN");
+				//skip asking a no of question, use default
+				setAttr(SESSSTATE,PSstate.LEVEL,s);
+
+				return getNextQuestion("let start with "+QN_NO_DEFAULT+" questions" ,s);
+				
+			}else if (getCurrentState(s)  == PSstate.LEVEL)
+			{
+				log.info("processUnclearResponse : LEVEL");
+				setAttr(SESSSTATE,PSstate.START,s);
+				setAttr(LEVEL,"easy",s);
+				
+				return getNextQuestion("let start with the easy level, " ,s);
+				
+			}else if (getCurrentState(s)  == PSstate.START)
+			{   log.info("processUnclearResponse : START");
+				// process as usual, we handle this case in processAnswer method
+				return processAnswer(r, s);
+			}else
+				{
+					log.error("processUnclearResponse : Unknown Mode");
+				
+					if(getCurrentState(s) == PSstate.START)
+						return askAgain("Question number "+getAttr(QN_NO,s) + ", " +getStrAttr(QUESTION, s));
+					else
+						return askAgain(getStrAttr(QUESTION, s));
+				}
+			
+		}
 		
-		private SpeechletResponse askMode()
+		private SpeechletResponse askMode(Session s)
 		{
 			// Create the plain text output.
 	        PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-	        speech.setText("Before we begin, Would you like to set a number of challenge");
+	        speech.setText("Welcome to plus challenge, Before we begin, Would you like to set a number of challenge");
 	        
+	        // keep latest question in QUESTION attribute, just in case user ask for help, so , we can repeat latest question again
+	        setAttr(QUESTION,"Would you like to set a number of challenge",s);
 	        // Create reprompt
 	        Reprompt reprompt = new Reprompt();
 	        reprompt.setOutputSpeech(speech);
@@ -304,11 +402,14 @@ public class App implements Speechlet
 		}
 		
 		
-		 private SpeechletResponse askLevel()
+		 private SpeechletResponse askLevel(String initSpeech,Session s)
 		{
 			// Create the plain text output.
 	        PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-	        speech.setText("Could I ask you how dificult you prefer, easy , medium or hard");
+	        speech.setText(initSpeech+"Could I ask you what level you prefer, easy , medium or hard");
+	        
+	     // keep latest question in QUESTION attribute, just in case user ask for help, so , we can repeat latest question again
+	        setAttr(QUESTION,"Could I ask you what level you prefer, easy , medium or hard",s);
 	        
 	        // Create reprompt
 	        Reprompt reprompt = new Reprompt();
@@ -317,11 +418,14 @@ public class App implements Speechlet
 			return SpeechletResponse.newAskResponse(speech, reprompt);
 		}
 
-		private SpeechletResponse askNoOfQuestion()
+		private SpeechletResponse askNoOfQuestion(String initSpeech, Session s)
 		{
 			// Create the plain text output.
 	        PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-	        speech.setText("Thanks, How many challenges you would like");
+	        speech.setText(initSpeech + ", How many challenges you would like");
+	        
+	        // keep latest question in QUESTION attribute, just in case user ask for help, so , we can repeat latest question again
+	        setAttr(QUESTION,"How many challenges you would like",s);
 	        
 	        // Create reprompt
 	        Reprompt reprompt = new Reprompt();
@@ -330,11 +434,15 @@ public class App implements Speechlet
 			return SpeechletResponse.newAskResponse(speech, reprompt);
 		}
 		
-		private SpeechletResponse askAgain()
+		private SpeechletResponse askAgain(String s)
 		{
 			// Create the plain text output.
 	        PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-	        speech.setText("Could you please answer again");
+	        if (s==null)
+	        	speech.setText("Could you please answer again");
+	        else
+	        	speech.setText(s);
+
 	        
 	        // Create reprompt
 	        Reprompt reprompt = new Reprompt();
@@ -344,13 +452,13 @@ public class App implements Speechlet
 			return SpeechletResponse.newAskResponse(speech, reprompt);
 		}
 		
-		private SpeechletResponse askQuestion(Session s)
+		private SpeechletResponse askQuestion(String initSpeech, Session s)
 		{
 			Integer a = getRandom(s);
 			Integer b = getRandom(s);
 			Integer answer = a+b;
 			setAttr(QN_ANS, answer,s); 
-			String speedText  = "Question number "+getAttr(QN_NO,s) + ", " + a + " + " + b;
+			String speedText  = initSpeech + "Question number "+getAttr(QN_NO,s) + ", " + a + " + " + b;
 			setAttr(QUESTION,a + " + " + b,s);
 			
 			log.info(speedText + " should be " + answer);
@@ -371,23 +479,27 @@ public class App implements Speechlet
 	        else
 	        	return SpeechletResponse.newAskResponse(speech, reprompt,cardQuestionAnswer);
 		}
-		private SpeechletResponse getNextQuestion(Session s)
+		private SpeechletResponse getNextQuestion(String initSpeech,Session s)
 		{
 			// Check all required parameters
-			if( getBoolAttr(ENDLESS,s)==null)
+			//if( getBoolAttr(ENDLESS,s)==null)
+			if (getCurrentState(s) == PSstate.MODE)
 			{
-				log.info("getNextQuestion called : MODE parameter is NULL");
-				return askMode();
+				log.info("getNextQuestion called : State MODE");
+				return askMode(s);
 			}
 			
-			if(!getBoolAttr(ENDLESS,s)  && getAttr(NoOfQns,s)==null)
-				return askNoOfQuestion();
-			
-			
-			if( getStrAttr(LEVEL,s)==null)
+			if (getCurrentState(s) == PSstate.NOOFQN)
 			{
-				log.info("getNextQuestion called : LEVEL parameter is NULL");
-				return askLevel();
+				log.info("getNextQuestion called : State NOOFQN");
+				return askNoOfQuestion(initSpeech,s);
+			}	
+			
+			
+			if (getCurrentState(s) == PSstate.LEVEL)
+			{
+				log.info("getNextQuestion called : State LEVEL");
+				return askLevel(initSpeech,s);
 			}
 			/*
 			if( getAttr(LIMIT,s)==null)
@@ -396,30 +508,35 @@ public class App implements Speechlet
 				return askLimit();
 			}
 			*/
-			if (!getBoolAttr(ENDLESS,s) )
+			
+			if (getCurrentState(s) == PSstate.START)
 			{
-				Integer curQnNo = getAttr(QN_NO,s);
-				log.info("getNextQuestion called : QN_NO is "+curQnNo);
-				
-				if(curQnNo<= getAttr(NoOfQns,s))
+				if (!getBoolAttr(ENDLESS,s) )
 				{
-					return askQuestion(s);
+					Integer curQnNo = getAttr(QN_NO,s);
+					log.info("getNextQuestion called : QN_NO is "+curQnNo);
 					
-				}else{
-					// No more questions left, finish and tell the score
-					return getFinalScore(s);
-				}
-				
-			}else if (getBoolAttr(ENDLESS,s))
-			{
-				while(!getBoolAttr(STOPFLAG, s))
+					if(curQnNo<= getAttr(NoOfQns,s))
+					{
+						return askQuestion(initSpeech,s);
+						
+					}else{
+						// No more questions left, finish and tell the score
+						return getFinalScore(s);
+					}
+					
+				}else if (getBoolAttr(ENDLESS,s))
 				{
-					return askQuestion(s);
+					while(!getBoolAttr(STOPFLAG, s))
+					{
+						return askQuestion(initSpeech,s);
+					}
+						// Users give wrong answer or time out
+						return getFinalScore(s);
+					
 				}
-					// Users give wrong answer or time out
-					return getFinalScore(s);
-				
 			}
+			
 			
 			return getFailResponse(s);
 			
@@ -463,11 +580,11 @@ public class App implements Speechlet
 		private void resetAttr(Session session)
 		{
 			 session.setAttribute(SESSSTATE, PSstate.MODE);
-			 session.setAttribute(ENDLESS, null);
-			 session.setAttribute(LEVEL, null);
-			 session.setAttribute(NoOfQns, null);
+			 session.setAttribute(ENDLESS, true);
+			 session.setAttribute(LEVEL, "easy");
+			 session.setAttribute(NoOfQns, QN_NO_DEFAULT);
 			 session.setAttribute(QN_NO, 1);
-			 session.setAttribute(QN_ANS, null);
+			 session.setAttribute(QN_ANS, "");
 			 session.setAttribute(SCORE, 0);
 			 session.setAttribute(STOPFLAG, false);
 		}
@@ -507,7 +624,8 @@ public class App implements Speechlet
 	        		+ "you get score. You can select a number of challenges you need to play "
 	        		+ "or play endlessly until you give wrong answer. "
 	        		+ "The difficulty can be 'easy' , 'medium' or 'hard' , In easy level, the possible operands can be 0 to 9,"
-	        		+ "in meduim level , the possible operands are 0 to 99 and in hard level , the possible operands are 0 to 999");
+	        		+ "in meduim level , the possible operands are 0 to 99 and in hard level , the possible operands are 0 to 999,"
+	        		+ getStrAttr(QUESTION, s));
 	        
 	        // Create the Simple card content.
 	        SimpleCard card = new SimpleCard();

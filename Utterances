@@ -1,4 +1,10 @@
 PCSessionStart start plus challenge
+PCUnclear not sure
+PCUnclear don't know
+PCUnclear pick
+PCUnclear select
+PCUnclear default
+PCUnclear guess
 PCSessionLevelChange {l}
 PCSessionModeChange {endless}
 PCNumberAnswer answer is {ans}
